@@ -1,0 +1,122 @@
+{
+  "identity": {
+    "name": "E1",
+    "role": "The Anti-AI Designer",
+    "mission": "Create a dashboard that feels like a high-precision instrument, not a generic admin panel."
+  },
+  "typography": {
+    "fonts": {
+      "headings": {
+        "family": "Manrope, sans-serif",
+        "weights": ["600", "800"],
+        "usage": "All section titles, modal headers, and metric values."
+      },
+      "body": {
+        "family": "IBM Plex Sans, sans-serif",
+        "weights": ["400", "500"],
+        "usage": "General text, labels, table data."
+      },
+      "code": {
+        "family": "JetBrains Mono, monospace",
+        "weights": ["400"],
+        "usage": "Commit hashes, branch names, JSON snippets, logs."
+      }
+    },
+    "rules": [
+      "Headings > 32px must use tracking-tight (-0.02em).",
+      "Overlines (e.g., 'STAGE 1') must be uppercase, text-xs, tracking-widest, and font-bold.",
+      "Metric numbers (e.g., '85%') should be at least text-4xl and font-extrabold."
+    ]
+  },
+  "colors": {
+    "palette_strategy": "The Conductor's Console (High Contrast Technical)",
+    "light_mode": {
+      "background": "#F8FAFC",
+      "foreground": "#0F172A",
+      "card": "#FFFFFF",
+      "border": "#E2E8F0",
+      "primary": "#0F172A",
+      "accent": "#3B82F6"
+    },
+    "dark_mode": {
+      "background": "#020617",
+      "foreground": "#F8FAFC",
+      "card": "#0F172A",
+      "border": "#1E293B",
+      "primary": "#38BDF8",
+      "accent": "#38BDF8"
+    },
+    "status_colors": {
+      "completed": "text-emerald-500 bg-emerald-500/10 border-emerald-500/20",
+      "in_progress": "text-amber-500 bg-amber-500/10 border-amber-500/20",
+      "blocked": "text-rose-500 bg-rose-500/10 border-rose-500/20",
+      "pending": "text-slate-500 bg-slate-500/10 border-slate-500/20"
+    }
+  },
+  "layout": {
+    "grid_system": "The Control Room Grid",
+    "spacing": {
+      "container_padding": "p-6 md:p-12",
+      "gap": "gap-6",
+      "internal_padding": "p-6"
+    },
+    "structure": [
+      "Dashboard: grid-cols-1 md:grid-cols-12 gap-6",
+      "Hero/Repo Input: col-span-12",
+      "Progress Overview: col-span-12 md:col-span-4 lg:col-span-3",
+      "Timeline/Stages: col-span-12 md:col-span-8 lg:col-span-9",
+      "Task Table: col-span-12 lg:col-span-8",
+      "Activity Feed: col-span-12 lg:col-span-4"
+    ]
+  },
+  "components": {
+    "Card": {
+      "style": "Flat, 1px border, no shadow by default. Hover: border-primary/50 transition-colors.",
+      "header": "Border-b border-border/50 pb-4 mb-4",
+      "usage": "Use for all major sections (Progress, Tasks, Activity)."
+    },
+    "Button": {
+      "style": "Sharp corners or small radius (rounded-md). High contrast.",
+      "primary": "bg-primary text-primary-foreground hover:opacity-90",
+      "secondary": "border border-input bg-background hover:bg-accent hover:text-accent-foreground"
+    },
+    "Progress": {
+      "style": "Height: h-2. Background: bg-secondary. Indicator: bg-primary (or status color).",
+      "variant": "Use 'segmented' look for stages if possible (gap-1 between segments)."
+    },
+    "Badge": {
+      "style": "rounded-sm px-2 py-0.5 text-xs font-medium uppercase tracking-wide",
+      "usage": "Status indicators (COMPLETED, BLOCKED)."
+    },
+    "Table": {
+      "style": "Compact. Row hover: bg-muted/50. Header: text-muted-foreground uppercase text-xs tracking-wider."
+    }
+  },
+  "visual_enhancers": {
+    "tracing_beam": "Use a glowing border effect on the 'Active Stage' card to indicate processing.",
+    "glassmorphism": "Use backdrop-blur-xl bg-background/80 for the sticky top navigation.",
+    "empty_states": "Use abstract geometric lines image with low opacity (10%) as background for empty data states.",
+    "icons": "Use Lucide React icons. Stroke width: 1.5px (thin and technical)."
+  },
+  "image_urls": {
+    "repo_sync_hero": {
+      "url": "https://images.unsplash.com/photo-1648611648035-805e9ae87437?crop=entropy&cs=srgb&fm=jpg&q=85",
+      "description": "Futuristic control room screens - use for 'Connect Repo' hero background with overlay.",
+      "category": "hero"
+    },
+    "empty_state_texture": {
+      "url": "https://images.unsplash.com/photo-1709334197341-122c6fd5ae1d?crop=entropy&cs=srgb&fm=jpg&q=85",
+      "description": "Abstract black and white lines - use for empty states or subtle texture.",
+      "category": "texture"
+    }
+  },
+  "universal_guidelines": [
+    "Do not use gradients for backgrounds. Use solid colors or subtle noise textures.",
+    "All interactive elements must have a data-testid attribute.",
+    "Use 'sonner' for toast notifications.",
+    "Ensure dark mode is not just 'inverted' but specifically tuned (slate-950 bg).",
+    "Animations: Use 'framer-motion' for layout transitions (layout prop) and list entrance animations.",
+    "Charts: Use Recharts. Customize tooltips to match the Card style (glassmorphism)."
+  ],
+  "instructions_to_main_agent": "Implement the dashboard using the 'Control Room' grid layout. Start with the Repo Input section. Use the provided image URLs for the hero and empty states. Ensure the theme toggle works and persists preference. Mock the Conductor data structure if the API is not ready, but build the UI to handle the real schema (Stages -> Tasks -> Status)."
+}
