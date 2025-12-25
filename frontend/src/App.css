@@ -1,34 +1,54 @@
-.App-logo {
-    height: 40vmin;
-    pointer-events: none;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-    .App-logo {
-        animation: App-logo-spin infinite 20s linear;
-    }
-}
-
-.App-header {
-    background-color: #0f0f10;
+/* App-specific styles */
+.App {
     min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    font-size: calc(10px + 2vmin);
-    color: white;
 }
 
-.App-link {
-    color: #61dafb;
+/* Status badge styles */
+.status-completed {
+    @apply text-emerald-600 bg-emerald-500/10 border-emerald-500/20 dark:text-emerald-400;
 }
 
-@keyframes App-logo-spin {
-    from {
-        transform: rotate(0deg);
-    }
-    to {
-        transform: rotate(360deg);
-    }
+.status-in-progress {
+    @apply text-amber-600 bg-amber-500/10 border-amber-500/20 dark:text-amber-400;
+}
+
+.status-blocked {
+    @apply text-rose-600 bg-rose-500/10 border-rose-500/20 dark:text-rose-400;
+}
+
+.status-pending {
+    @apply text-slate-600 bg-slate-500/10 border-slate-500/20 dark:text-slate-400;
+}
+
+/* Chart container */
+.chart-container {
+    @apply w-full h-full;
+}
+
+/* Card hover effect */
+.card-hover {
+    @apply transition-all duration-200 hover:border-primary/50;
+}
+
+/* Phase connector line */
+.phase-connector {
+    @apply absolute left-5 top-12 bottom-0 w-0.5 bg-border;
+}
+
+/* Progress bar segments */
+.progress-segment {
+    @apply h-2 rounded-full transition-all duration-500;
+}
+
+/* Activity item animation */
+.activity-item {
+    @apply transition-all duration-200 hover:bg-muted/50;
+}
+
+/* Empty state background */
+.empty-state-bg {
+    background-image: url('https://images.unsplash.com/photo-1709334197341-122c6fd5ae1d?crop=entropy&cs=srgb&fm=jpg&q=85');
+    background-size: cover;
+    background-position: center;
+    opacity: 0.05;
 }
