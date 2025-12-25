@@ -26,7 +26,7 @@ const statusConfig = {
   },
 };
 
-function PhaseItem({ phase, index, isLast }) {
+function PhaseItem({ phase, index, isLast, repoUrl }) {
   const [expanded, setExpanded] = useState(phase.status === "in_progress");
   const config = statusConfig[phase.status] || statusConfig.pending;
   const Icon = config.icon;
@@ -127,10 +127,16 @@ function PhaseItem({ phase, index, isLast }) {
                     )}>
                       {task.name}
                     </span>
-                    {task.commit_sha && (
-                      <code className="text-xs text-muted-foreground mono bg-muted px-1.5 py-0.5 rounded">
+                    {task.commit_sha && repoUrl && (
+                      <a 
+                        href={`${repoUrl}/commit/${task.commit_sha}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        className="text-xs text-primary hover:underline mono bg-muted px-1.5 py-0.5 rounded"
+                      >
                         {task.commit_sha}
-                      </code>
+                      </a>
                     )}
                   </div>
                 );
@@ -143,7 +149,7 @@ function PhaseItem({ phase, index, isLast }) {
   );
 }
 
-export default function StageTimeline({ phases }) {
+export default function StageTimeline({ phases, repoUrl }) {
   if (!phases || phases.length === 0) {
     return (
       <Card className="border card-hover" data-testid="stage-timeline-empty">
@@ -178,6 +184,7 @@ export default function StageTimeline({ phases }) {
               phase={phase} 
               index={index}
               isLast={index === phases.length - 1}
+              repoUrl={repoUrl}
             />
           ))}
         </div>
