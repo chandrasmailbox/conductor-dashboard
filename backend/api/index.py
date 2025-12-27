@@ -1,5 +1,4 @@
 from fastapi import FastAPI, APIRouter, HTTPException
-from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
@@ -13,43 +12,52 @@ from typing import List, Optional, Dict, Any
 import uuid
 from datetime import datetime, timezone
 
-ROOT_DIR = Path(__file__).parent
-load_dotenv(ROOT_DIR / '.env')
+# -----------------------------
+# LAZY MONGO CONNECTION (Vercel-safe)
+# -----------------------------
+def get_db():
+    mongo_url = os.environ.get("MONGODB_URI")
+    db_name = os.environ.get("DB_NAME")
 
-# MongoDB connection
-mongo_url = os.environ['MONGO_URL']
-client = AsyncIOMotorClient(mongo_url)
-db = client[os.environ['DB_NAME']]
+    if not mongo_url or not db_name:
+        raise RuntimeError("Missing MONGO_URL or DB_NAME environment variables")
 
-# Create the main app without a prefix
+    client = AsyncIOMotorClient(mongo_url)
+    return client[db_name]
+
+# -----------------------------
+# FASTAPI APP + ROUTER
+# -----------------------------
 app = FastAPI()
-
-# Create a router with the /api prefix
 api_router = APIRouter(prefix="/api")
 
-# GitHub API base URL
+# -----------------------------
+# CONSTANTS
+# -----------------------------
 GITHUB_API_BASE = "https://api.github.com"
 GITHUB_RAW_BASE = "https://raw.githubusercontent.com"
 
-# Models
+# -----------------------------
+# MODELS
+# -----------------------------
 class RepoRequest(BaseModel):
     repo_url: str
 
 class Task(BaseModel):
     name: str
-    status: str  # completed, in_progress, pending, blocked
+    status: str
     commit_sha: Optional[str] = None
     subtasks: List[str] = []
 
 class Phase(BaseModel):
     name: str
     tasks: List[Task]
-    status: str  # completed, in_progress, pending
+    status: str
 
 class Track(BaseModel):
     name: str
     path: str
-    status: str  # completed, in_progress, pending
+    status: str
 
 class ConductorProgress(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -78,9 +86,10 @@ class RepoCache(BaseModel):
     data: Dict[str, Any]
     cached_at: str
 
-
+# -----------------------------
+# HELPERS
+# -----------------------------
 def parse_repo_url(url: str) -> tuple:
-    """Parse GitHub repo URL to get owner and repo name"""
     patterns = [
         r"github\.com[/:]([^/]+)/([^/\.]+)",
         r"^([^/]+)/([^/]+)$"
@@ -91,12 +100,9 @@ def parse_repo_url(url: str) -> tuple:
             return match.group(1), match.group(2).replace('.git', '')
     raise ValueError("Invalid GitHub repository URL")
 
-
 def parse_task_status(line: str) -> tuple:
-    """Parse a task line and extract status and commit SHA"""
     line = line.strip()
     if line.startswith("- [x]"):
-        # Check for commit SHA in brackets
         sha_match = re.search(r'\[([a-f0-9]{7,40})\]', line)
         sha = sha_match.group(1) if sha_match else None
         name = re.sub(r'\[([a-f0-9]{7,40})\]', '', line[5:]).strip()
@@ -111,29 +117,24 @@ def parse_task_status(line: str) -> tuple:
     elif line.startswith("- [ ]"):
         name = line[5:].strip()
         name = re.sub(r'^Task:\s*', '', name).strip()
-        # Check if blocked
         if "blocked" in name.lower():
             return name, "blocked", None
         return name, "pending", None
     return None, None, None
 
-
 def parse_plan_md(content: str) -> List[Phase]:
-    """Parse plan.md content to extract phases and tasks"""
     phases = []
     current_phase = None
     current_task = None
     lines = content.split('\n')
-    
+
     for line in lines:
-        # Check for phase headers
         if line.startswith("## Phase"):
             if current_phase:
                 phases.append(current_phase)
             phase_name = line.replace("##", "").strip()
             current_phase = Phase(name=phase_name, tasks=[], status="pending")
-        
-        # Check for task lines
+
         elif line.strip().startswith("- ["):
             name, status, sha = parse_task_status(line)
             if name:
@@ -141,16 +142,14 @@ def parse_plan_md(content: str) -> List[Phase]:
                 if current_phase:
                     current_phase.tasks.append(task)
                 current_task = task
-        
-        # Check for subtasks (indented items)
+
         elif line.strip().startswith("- [ ]") and current_task and line.startswith("  "):
             subtask_name = line.strip()[5:].strip()
             current_task.subtasks.append(subtask_name)
-    
+
     if current_phase:
         phases.append(current_phase)
-    
-    # Calculate phase status
+
     for phase in phases:
         if not phase.tasks:
             phase.status = "pending"
@@ -160,60 +159,47 @@ def parse_plan_md(content: str) -> List[Phase]:
             phase.status = "in_progress"
         else:
             phase.status = "pending"
-    
+
     return phases
 
-
 def parse_tracks_md(content: str) -> List[Track]:
-    """Parse tracks.md to extract track information"""
     tracks = []
     lines = content.split('\n')
-    
+
     for line in lines:
-        # Look for track entries like ## [x] Track: Name or ## [~] Track: Name
         if "Track:" in line:
             status = "pending"
             if "[x]" in line or "✓" in line:
                 status = "completed"
             elif "[~]" in line:
                 status = "in_progress"
-            
-            # Extract track name
+
             name_match = re.search(r'Track:\s*(.+?)(?:\*|$)', line)
             if name_match:
                 name = name_match.group(1).strip()
-                
-                # Extract path
+
                 path_match = re.search(r'\*Link:\s*\[([^\]]+)\]', line)
                 if not path_match:
                     path_match = re.search(r'\(([^)]+)\)', line)
                 path = path_match.group(1) if path_match else ""
-                
+
                 tracks.append(Track(name=name, path=path, status=status))
-    
+
     return tracks
 
-
 async def fetch_github_file(owner: str, repo: str, path: str) -> Optional[str]:
-    """Fetch a file from GitHub"""
-    url = f"{GITHUB_RAW_BASE}/{owner}/{repo}/master/{path}"
     async with httpx.AsyncClient() as client:
-        try:
-            response = await client.get(url, timeout=30.0)
-            if response.status_code == 200:
-                return response.text
-            # Try main branch
-            url = f"{GITHUB_RAW_BASE}/{owner}/{repo}/main/{path}"
-            response = await client.get(url, timeout=30.0)
-            if response.status_code == 200:
-                return response.text
-        except Exception as e:
-            logging.error(f"Error fetching {path}: {e}")
+        for branch in ["master", "main"]:
+            url = f"{GITHUB_RAW_BASE}/{owner}/{repo}/{branch}/{path}"
+            try:
+                response = await client.get(url, timeout=30.0)
+                if response.status_code == 200:
+                    return response.text
+            except Exception as e:
+                logging.error(f"Error fetching {path}: {e}")
     return None
 
-
 async def fetch_github_contents(owner: str, repo: str, path: str = "") -> List[Dict]:
-    """Fetch directory contents from GitHub"""
     url = f"{GITHUB_API_BASE}/repos/{owner}/{repo}/contents/{path}"
     async with httpx.AsyncClient() as client:
         try:
@@ -224,9 +210,7 @@ async def fetch_github_contents(owner: str, repo: str, path: str = "") -> List[D
             logging.error(f"Error fetching contents: {e}")
     return []
 
-
 async def fetch_github_commits(owner: str, repo: str, per_page: int = 20) -> List[Dict]:
-    """Fetch recent commits from GitHub"""
     url = f"{GITHUB_API_BASE}/repos/{owner}/{repo}/commits?per_page={per_page}"
     async with httpx.AsyncClient() as client:
         try:
@@ -248,59 +232,54 @@ async def fetch_github_commits(owner: str, repo: str, per_page: int = 20) -> Lis
             logging.error(f"Error fetching commits: {e}")
     return []
 
-
+# -----------------------------
+# ROUTES
+# -----------------------------
 @api_router.get("/")
 async def root():
     return {"message": "Conductor Progress Dashboard API"}
 
-
 @api_router.post("/repo/analyze", response_model=ConductorProgress)
 async def analyze_repository(request: RepoRequest):
-    """Analyze a GitHub repository for Conductor progress"""
+    db = get_db()
+
     try:
         owner, repo = parse_repo_url(request.repo_url)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
-    
-    # Check cache first
+
     cached = await db.repo_cache.find_one(
         {"repo_url": request.repo_url},
         {"_id": 0}
     )
-    
+
     if cached:
         cached_time = datetime.fromisoformat(cached["cached_at"].replace('Z', '+00:00'))
         if (datetime.now(timezone.utc) - cached_time).seconds < 60:
-            # Return cached data if less than 1 minute old
             return ConductorProgress(**cached["data"])
-    
+
     progress = ConductorProgress(
         repo_url=request.repo_url,
         repo_name=repo,
         owner=owner,
         last_synced=datetime.now(timezone.utc).isoformat()
     )
-    
-    # Fetch commits
-    commits = await fetch_github_commits(owner, repo)
-    progress.commits = commits
-    
-    # Try to find conductor directory
+
+    progress.commits = await fetch_github_commits(owner, repo)
+
     conductor_paths = ["conductor", ".conductor", "docs/conductor"]
     conductor_contents = []
-    
+
     for path in conductor_paths:
         contents = await fetch_github_contents(owner, repo, path)
         if contents:
             conductor_contents = contents
             break
-    
+
     if not conductor_contents:
-        # No conductor directory found - return basic info
         progress.product_name = repo
         progress.product_description = "No Conductor context files found in this repository."
-        
-        # Cache the result
+
         cache_doc = {
             "repo_url": request.repo_url,
             "data": progress.model_dump(),
@@ -312,21 +291,19 @@ async def analyze_repository(request: RepoRequest):
             upsert=True
         )
         return progress
-    
-    # Parse conductor files
+
     for item in conductor_contents:
         name = item.get("name", "")
-        if name == "product.md" or name == "product-requirements.md":
+        if name in ["product.md", "product-requirements.md"]:
             content = await fetch_github_file(owner, repo, item["path"])
             if content:
-                # Extract product name from first header
                 lines = content.split('\n')
                 for line in lines:
                     if line.startswith("# "):
                         progress.product_name = line[2:].strip()
                         break
                 progress.product_description = content[:500] + "..." if len(content) > 500 else content
-        
+
         elif name == "setup_state.json":
             content = await fetch_github_file(owner, repo, item["path"])
             if content:
@@ -335,41 +312,37 @@ async def analyze_repository(request: RepoRequest):
                     progress.setup_state = json.loads(content)
                 except:
                     pass
-        
+
         elif name == "tracks.md":
             content = await fetch_github_file(owner, repo, item["path"])
             if content:
                 progress.tracks = parse_tracks_md(content)
-        
+
         elif name == "tracks" and item.get("type") == "dir":
-            # Fetch track subdirectories
             track_contents = await fetch_github_contents(owner, repo, item["path"])
             for track_dir in track_contents:
                 if track_dir.get("type") == "dir":
-                    # Look for plan.md in each track
                     plan_path = f"{track_dir['path']}/plan.md"
                     plan_content = await fetch_github_file(owner, repo, plan_path)
                     if plan_content:
                         phases = parse_plan_md(plan_content)
                         progress.phases.extend(phases)
-    
-    # Calculate statistics
+
     all_tasks = []
     for phase in progress.phases:
         all_tasks.extend(phase.tasks)
-    
+
     progress.total_tasks = len(all_tasks)
     progress.completed_tasks = sum(1 for t in all_tasks if t.status == "completed")
     progress.in_progress_tasks = sum(1 for t in all_tasks if t.status == "in_progress")
     progress.pending_tasks = sum(1 for t in all_tasks if t.status == "pending")
     progress.blocked_tasks = sum(1 for t in all_tasks if t.status == "blocked")
-    
+
     if progress.total_tasks > 0:
         progress.overall_completion = round(
             (progress.completed_tasks / progress.total_tasks) * 100, 1
         )
-    
-    # Cache the result
+
     cache_doc = {
         "repo_url": request.repo_url,
         "data": progress.model_dump(),
@@ -380,35 +353,30 @@ async def analyze_repository(request: RepoRequest):
         {"$set": cache_doc},
         upsert=True
     )
-    
-    return progress
 
+    return progress
 
 @api_router.get("/repo/cached")
 async def get_cached_repos():
-    """Get list of previously analyzed repositories"""
+    db = get_db()
     repos = await db.repo_cache.find({}, {"_id": 0, "repo_url": 1, "cached_at": 1}).to_list(100)
     return repos
 
-
-# Include the router in the main app
+# -----------------------------
+# REGISTER ROUTER + CORS
+# -----------------------------
 app.include_router(api_router)
 
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
-    allow_origins=os.environ.get('CORS_ORIGINS', '*').split(','),
+    allow_origins=os.environ.get("CORS_ORIGINS", "*").split(","),
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Configure logging
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
-
-@app.on_event("shutdown")
-async def shutdown_db_client():
-    client.close()
