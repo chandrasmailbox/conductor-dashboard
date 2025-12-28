@@ -31,6 +31,3 @@ This dashboard automates the tracking of development milestones. By analyzing st
 2. **Parsing Engine:** Logic to interpret the hierarchy of `plan.md` and the state of `setup_state.json`.
 3. **Visualization Layer:** Frontend components (Charts, Timelines, Tables) that consume the normalized data.
 
-
-
-**Would you like me to generate the specific Markdown templates for the `tracks.md` and `plan.md` files so that users know exactly how to format their repository for your dashboard?**
