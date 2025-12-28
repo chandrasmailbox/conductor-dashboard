@@ -7,6 +7,7 @@ import httpx
 import re
 import base64
 from pathlib import Path
+from dotenv import load_dotenv 
 from pydantic import BaseModel, Field, ConfigDict
 from typing import List, Optional, Dict, Any
 import uuid
@@ -15,6 +16,13 @@ from datetime import datetime, timezone
 # -----------------------------
 # LAZY MONGO CONNECTION (Vercel-safe)
 # -----------------------------
+# Load .env from the backend directory (local only)
+ROOT_DIR = Path(__file__).parent
+env_path = ROOT_DIR / ".env"
+
+if env_path.exists():
+    load_dotenv(env_path)
+
 def get_db():
     mongo_url = os.environ.get("MONGODB_URI")
     db_name = os.environ.get("DB_NAME")
@@ -365,15 +373,23 @@ async def get_cached_repos():
 # -----------------------------
 # REGISTER ROUTER + CORS
 # -----------------------------
-app.include_router(api_router)
+
+origins = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_credentials=False,   # IMPORTANT: allows "*"
-    allow_origins=["*"],       # or [FRONTEND_ORIGIN] if you want to restrict
+    allow_origins=origins,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+app.include_router(api_router)
+
 
 logging.basicConfig(
     level=logging.INFO,
