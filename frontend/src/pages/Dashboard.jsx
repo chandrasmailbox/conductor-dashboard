@@ -59,14 +59,14 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-background" data-testid="dashboard">
       <Header onSync={handleSync} loading={loading} hasData={!!progress} />
-      
+
       <main className="container mx-auto px-6 md:px-12 py-8">
         <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
           {/* Repo Input - Full Width */}
           <div className="col-span-12">
-            <RepoInput 
-              onSubmit={handleRepoSubmit} 
-              loading={loading} 
+            <RepoInput
+              onSubmit={handleRepoSubmit}
+              loading={loading}
               defaultValue={repoUrl}
             />
           </div>
@@ -93,7 +93,7 @@ export default function Dashboard() {
                 exit={{ opacity: 0 }}
                 className="col-span-12"
               >
-                <EmptyState 
+                <EmptyState
                   title="Unable to analyze repository"
                   description={error}
                   showRetry
@@ -108,25 +108,17 @@ export default function Dashboard() {
                 exit={{ opacity: 0 }}
                 className="col-span-12 grid grid-cols-1 md:grid-cols-12 gap-6"
               >
-                {/* Progress Overview - Left Side */}
-                <div className="col-span-12 md:col-span-4 lg:col-span-3 space-y-6">
+                {/* Sidebar: Progress, Chart */}
+                <div className="col-span-12 md:col-span-4 lg:col-span-3 space-y-6 h-fit">
                   <ProgressOverview progress={progress} />
                   <CompletionChart progress={progress} />
                 </div>
 
-                {/* Stage Timeline - Right Side */}
-                <div className="col-span-12 md:col-span-8 lg:col-span-9">
-                  <StageTimeline phases={progress.phases} />
-                </div>
-
-                {/* Task Table - Bottom Left */}
-                <div className="col-span-12 lg:col-span-8">
-                  <TaskTable phases={progress.phases} />
-                </div>
-
-                {/* Activity Feed - Bottom Right */}
-                <div className="col-span-12 lg:col-span-4">
-                  <ActivityFeed commits={progress.commits} />
+                {/* Main Content: Timeline, Tasks, and Activity */}
+                <div className="col-span-12 md:col-span-8 lg:col-span-9 space-y-6">
+                  <StageTimeline phases={progress.phases} repoUrl={repoUrl} />
+                  <TaskTable phases={progress.phases} defaultStatusFilter={['in_progress']} repoUrl={repoUrl} />
+                  <ActivityFeed commits={progress.commits} repoUrl={repoUrl} />
                 </div>
               </motion.div>
             ) : (
@@ -137,7 +129,7 @@ export default function Dashboard() {
                 exit={{ opacity: 0 }}
                 className="col-span-12"
               >
-                <EmptyState 
+                <EmptyState
                   title="No repository analyzed"
                   description="Enter a GitHub repository URL above to analyze its Conductor progress."
                 />

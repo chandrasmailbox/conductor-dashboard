@@ -42,8 +42,8 @@ const statusConfig = {
   },
 };
 
-export default function TaskTable({ phases }) {
-  const [statusFilter, setStatusFilter] = useState([]);
+export default function TaskTable({ phases, defaultStatusFilter = [], repoUrl }) {
+  const [statusFilter, setStatusFilter] = useState(defaultStatusFilter);
   const [phaseFilter, setPhaseFilter] = useState([]);
 
   // Flatten all tasks with phase info
@@ -118,7 +118,7 @@ export default function TaskTable({ phases }) {
             </p>
             <CardTitle>All Tasks ({filteredTasks.length})</CardTitle>
           </div>
-          
+
           <div className="flex gap-2">
             {/* Status Filter */}
             <DropdownMenu>
@@ -176,7 +176,7 @@ export default function TaskTable({ phases }) {
           </div>
         </div>
       </CardHeader>
-      
+
       <CardContent className="pt-0">
         <Table>
           <TableHeader>
@@ -195,9 +195,9 @@ export default function TaskTable({ phases }) {
                 <TableRow key={index} className="activity-item" data-testid={`table-row-${index}`}>
                   <TableCell className="font-medium">
                     <div className="flex items-center gap-2">
-                      <Icon 
-                        className={cn("w-4 h-4 shrink-0", config.className.split(' ')[0])} 
-                        strokeWidth={1.5} 
+                      <Icon
+                        className={cn("w-4 h-4 shrink-0", config.className.split(' ')[0])}
+                        strokeWidth={1.5}
                       />
                       <span className={cn(
                         "truncate max-w-[300px]",
@@ -213,8 +213,8 @@ export default function TaskTable({ phases }) {
                     </span>
                   </TableCell>
                   <TableCell>
-                    <Badge 
-                      variant="outline" 
+                    <Badge
+                      variant="outline"
                       className={cn("text-[10px] uppercase tracking-wide", config.className)}
                     >
                       {config.label}
@@ -222,9 +222,20 @@ export default function TaskTable({ phases }) {
                   </TableCell>
                   <TableCell className="text-right">
                     {task.commit_sha ? (
-                      <code className="text-xs text-muted-foreground mono bg-muted px-1.5 py-0.5 rounded">
-                        {task.commit_sha}
-                      </code>
+                      repoUrl ? (
+                        <a
+                          href={`${repoUrl}/commit/${task.commit_sha}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs text-primary hover:underline mono bg-muted px-1.5 py-0.5 rounded"
+                        >
+                          {task.commit_sha}
+                        </a>
+                      ) : (
+                        <code className="text-xs text-muted-foreground mono bg-muted px-1.5 py-0.5 rounded">
+                          {task.commit_sha}
+                        </code>
+                      )
                     ) : (
                       <span className="text-muted-foreground">-</span>
                     )}

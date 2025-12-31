@@ -27,7 +27,7 @@ const statusConfig = {
 };
 
 function PhaseItem({ phase, index, isLast, repoUrl }) {
-  const [expanded, setExpanded] = useState(phase.status === "in_progress");
+  const [expanded, setExpanded] = useState(false);
   const config = statusConfig[phase.status] || statusConfig.pending;
   const Icon = config.icon;
   const isActive = phase.status === "in_progress";

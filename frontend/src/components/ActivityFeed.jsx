@@ -5,7 +5,7 @@ import { Badge } from "./ui/badge";
 import { ScrollArea } from "./ui/scroll-area";
 import { cn } from "../lib/utils";
 
-export default function ActivityFeed({ commits }) {
+export default function ActivityFeed({ commits, repoUrl }) {
   if (!commits || commits.length === 0) {
     return (
       <Card className="border card-hover" data-testid="activity-feed-empty">
@@ -46,8 +46,8 @@ export default function ActivityFeed({ commits }) {
               >
                 <div className={cn(
                   "w-8 h-8 rounded-full flex items-center justify-center shrink-0",
-                  commit.is_conductor 
-                    ? "bg-primary/10 text-primary" 
+                  commit.is_conductor
+                    ? "bg-primary/10 text-primary"
                     : "bg-muted text-muted-foreground"
                 )}>
                   {commit.is_conductor ? (
@@ -71,11 +71,22 @@ export default function ActivityFeed({ commits }) {
                       </Badge>
                     )}
                   </div>
-                  
+
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <code className="mono bg-muted px-1 py-0.5 rounded">
-                      {commit.sha}
-                    </code>
+                    {repoUrl ? (
+                      <a
+                        href={`${repoUrl}/commit/${commit.full_sha}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary hover:underline mono bg-muted px-1 py-0.5 rounded"
+                      >
+                        {commit.sha}
+                      </a>
+                    ) : (
+                      <code className="mono bg-muted px-1 py-0.5 rounded">
+                        {commit.sha}
+                      </code>
+                    )}
                     <span>by {commit.author}</span>
                     <span>
                       {formatDistanceToNow(new Date(commit.date), { addSuffix: true })}
